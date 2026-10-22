@@ -25,7 +25,7 @@ input{background:#172738;color:white;width:145px;max-width:45vw}button{backgroun
 </head>
 <body>
 <div id="game"></div>
-<div id="brand" class="panel"><h1>🌎 MUNDO DO CRIATIVOVIP</h1><p>Ilha natural • 8 biomas • vila entre árvores, rios e montanhas</p></div>
+<div id="brand" class="panel"><h1>🌎 MUNDO DO CRIATIVOVIP</h1><p>Ilha natural • 8 biomas • montanhas até 300 • cavernas e ravinas</p></div>
 <div id="stats" class="panel"><p>BLOCOS DE TERRENO</p><strong id="blockCount">200.000</strong><p>+ construções e objetos</p></div>
 <div id="controls" class="panel">
   <div class="row" style="margin-top:0">
@@ -58,10 +58,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const mount=document.getElementById('game');
-const scene=new THREE.Scene(); scene.background=new THREE.Color(0x9bcbed); scene.fog=new THREE.Fog(0xb9d9ef,145,310);
-const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,300);camera.position.set(43,34,52);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x9bcbed); scene.fog=new THREE.Fog(0xb9d9ef,360,760);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,900);camera.position.set(270,190,330);
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;mount.appendChild(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,2,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.48;controls.minDistance=8;controls.maxDistance=240;
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,35,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.48;controls.minDistance=8;controls.maxDistance=700;
 scene.add(new THREE.HemisphereLight(0xd9edff,0x526343,2.0));
 const sun=new THREE.DirectionalLight(0xfff3d8,2.0);sun.position.set(-12,25,14);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
 // Textura discreta em pixels, para dar detalhe sem deixar o visual carregado.
@@ -88,7 +88,7 @@ function makeBlock(x,y,z,type='grass',owner='Mundo'){
  const mesh=new THREE.Mesh(cubeGeo,materials[type]||materials.grass);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData={x,y,z,type,owner};scene.add(mesh);blocks.set(k,mesh);
 }
 function removeBlock(x,y,z){const k=key(x,y,z),m=blocks.get(k);if(!m)return false;scene.remove(m);m.geometry.dispose();blocks.delete(k);return true}
-function saveLocal(){const data=[...blocks.values()].map(m=>m.userData);localStorage.setItem('mundo_blocks_v5_200k',JSON.stringify(data));document.getElementById('blockCount').textContent='200.000'}
+function saveLocal(){const data=[...blocks.values()].map(m=>m.userData);localStorage.setItem('mundo_blocks_v5_200k',JSON.stringify(data));document.getElementById('blockCount').textContent='200.000+'}
 function loadWorld(){
  const stored=localStorage.getItem('mundo_blocks_v5_200k');
  if(stored){try{JSON.parse(stored).forEach(b=>makeBlock(b.x,b.y,b.z,b.type,b.owner));}catch{}}
@@ -113,15 +113,19 @@ function loadWorld(){
   }
   for(let x=-half;x<half+1;x++)for(let z=-half;z<half+1;z++){
     const b=biomeAt(x,z),obj=dummies[b];
-    // Relevo orgânico e suave: colinas largas, pequenas ondulações e baixadas costeiras.
+    // Altitudes reais de 0 a 300 blocos: colinas, cadeias de montanhas e vales.
     const dist=Math.sqrt(x*x+z*z);
-    const broad=(Math.sin(x*.035+Math.sin(z*.021)*1.8)+Math.cos(z*.031+Math.sin(x*.018)*1.4))*1.35;
-    const small=(Math.sin(x*.13+z*.07)+Math.cos(z*.11-x*.06))*.42;
-    const inland=Math.max(0,Math.min(1,(205-dist)/85));
-    let h=Math.max(0,Math.min(7,Math.round(1.2+broad+small+inland*2.2)));
-    // Biomas de neve e montanha ganham elevações maiores, com transições menos geométricas.
-    if(b===1||b===3) h=Math.min(9,h+Math.max(0,Math.round((Math.sin(x*.055)*Math.cos(z*.05)+.25)*2)));
-    obj.position.set(x,h,z);obj.updateMatrix();instances[b].setMatrixAt(biomeCounts[b]++,obj.matrix);
+    const broad=(Math.sin(x*.035+Math.sin(z*.021)*1.8)+Math.cos(z*.031+Math.sin(x*.018)*1.4))*5;
+    const small=(Math.sin(x*.13+z*.07)+Math.cos(z*.11-x*.06))*2;
+    const inland=Math.max(0,Math.min(1,(220-dist)/100));
+    const peak=(cx,cz,rx,rz,p)=>p*Math.exp(-(((x-cx)/rx)**2+((z-cz)/rz)**2));
+    const mountain=Math.max(peak(75,-65,38,46,245),peak(112,-35,28,34,210),peak(-145,105,42,36,185),peak(20,145,34,42,160));
+    // Ravina comprida e profunda esculpida na superfície.
+    const ravineLine=Math.abs(z-(0.34*x+18));
+    const ravine=ravineLine<7 && x>-175 && x<155 ? (1-ravineLine/7)*Math.min(150,Math.max(0,150-Math.abs(x)*.25)) : 0;
+    let h=Math.round(Math.max(0,Math.min(300,8+inland*22+broad+small+mountain-ravine)));
+    if(b===1||b===3)h=Math.min(300,h+Math.max(0,Math.round((Math.sin(x*.055)*Math.cos(z*.05)+.25)*12)));
+    obj.position.set(x,h,z);obj.scale.set(1,Math.max(1,h),1);obj.position.y=Math.max(0,h)/2;obj.updateMatrix();instances[b].setMatrixAt(biomeCounts[b]++,obj.matrix);
   }
   for(let b=0;b<instances.length;b++){instances[b].count=biomeCounts[b];instances[b].instanceMatrix.needsUpdate=true;}
   // 191 blocos adicionais completam exatamente 200.000 blocos de terreno.
@@ -162,8 +166,14 @@ function loadWorld(){
    makeBlock(tx,1,tz,'cactus','Mundo'); makeBlock(tx,2,tz,'cactus','Mundo');
    if((tx+tz)%2===0)makeBlock(tx+1,2,tz,'cactus','Mundo');
   }
-  // Picos escalonados nas montanhas
-  for(const [cx,cz,h] of [[8,8,5],[17,13,7],[22,4,4],[8,21,6],[18,22,5],[29,10,8],[28,28,7],[5,30,5],[-8,27,4]]){
+  // Entradas de cavernas: arcos rochosos com abertura escura no centro.
+  for(const [cx,cz] of [[-62,-42],[82,-76],[-145,105],[112,-35]]){
+    for(let y=1;y<=5;y++){makeBlock(cx-3,y,cz,'darkstone','Caverna');makeBlock(cx+3,y,cz,'darkstone','Caverna');}
+    for(let dx=-3;dx<=3;dx++)if(Math.abs(dx)>=2)for(let y=5;y<=7;y++)makeBlock(cx+dx,y,cz,'rock','Caverna');
+    for(let y=1;y<=4;y++)for(let depth=1;depth<=9;depth++)makeBlock(cx,y,cz+depth,'darkstone','Interior da caverna');
+  }
+  // Picos escalonados visíveis perto da região central.
+  for(const [cx,cz,h] of [[8,8,18],[17,13,25],[22,4,14],[8,21,21],[18,22,17],[29,10,28],[28,28,23],[5,30,18],[-8,27,14]]){
    for(let y=1;y<=h;y++)for(let dx=-Math.max(1,Math.floor((h-y)/2));dx<=Math.max(1,Math.floor((h-y)/2));dx++)for(let dz=-Math.max(1,Math.floor((h-y)/2));dz<=Math.max(1,Math.floor((h-y)/2));dz++)makeBlock(cx+dx,y,cz+dz,y===h?'snow':'rock','Mundo');
   }
   // Mais detalhes naturais espalhados pelo mapa maior.
@@ -217,7 +227,7 @@ function loadWorld(){
   for(const [x,z] of [[-3,2],[3,2],[-3,8],[3,8]])makeBlock(x,2,z,'stone','Mundo');
   saveLocal();
  }
- document.getElementById('blockCount').textContent='200.000';
+ document.getElementById('blockCount').textContent='200.000+';
 }
 loadWorld();
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.style.display='none',2400)}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mundo do CriativoVIP — 4 Biomas</title>
+<title>Mundo do CriativoVIP — 200 mil blocos e vários biomas</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -25,8 +25,8 @@ input{background:#172738;color:white;width:145px;max-width:45vw}button{backgroun
 </head>
 <body>
 <div id="game"></div>
-<div id="brand" class="panel"><h1>🌎 MUNDO DO CRIATIVOVIP</h1><p>Mundo ampliado • 4 biomas • texturas leves e novas áreas</p></div>
-<div id="stats" class="panel"><p>BLOCOS DE TERRENO</p><strong id="blockCount">100.000</strong><p>+ construções e objetos</p></div>
+<div id="brand" class="panel"><h1>🌎 MUNDO DO CRIATIVOVIP</h1><p>Mundo enorme • 8 biomas • texturas pixeladas bonitas e discretas</p></div>
+<div id="stats" class="panel"><p>BLOCOS DE TERRENO</p><strong id="blockCount">200.000</strong><p>+ construções e objetos</p></div>
 <div id="controls" class="panel">
   <div class="row" style="margin-top:0">
     <button id="buildMode" class="active">🧱 Construir</button>
@@ -52,10 +52,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const mount=document.getElementById('game');
-const scene=new THREE.Scene(); scene.background=new THREE.Color(0x83b5ff); scene.fog=new THREE.Fog(0x83b5ff,75,175);
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x83b5ff); scene.fog=new THREE.Fog(0x83b5ff,115,260);
 const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,300);camera.position.set(43,34,52);
 const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;mount.appendChild(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,2,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.48;controls.minDistance=8;controls.maxDistance=150;
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,2,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.48;controls.minDistance=8;controls.maxDistance=240;
 scene.add(new THREE.HemisphereLight(0xd9edff,0x526343,2.0));
 const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-12,25,14);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
 // Textura discreta em pixels, para dar detalhe sem deixar o visual carregado.
@@ -70,7 +70,9 @@ const mat=(color,extra={})=>new THREE.MeshStandardMaterial({color,map:subtleText
 const materials={
  grass:mat(0x66a94f), dirt:mat(0x8c5b39), stone:mat(0x89949d), wood:mat(0x86552e),
  leaves:mat(0x317c43), pink:mat(0xe8a5ce), sand:mat(0xd9c17b), orange:mat(0xc47739),
- snow:mat(0xf1f7ff), ice:mat(0x8ee5f5,{roughness:.45,metalness:.05}), rock:mat(0x777d88), cactus:mat(0x287b45), crystal:mat(0x9c65e8,{roughness:.35,metalness:.12})
+ snow:mat(0xf1f7ff), ice:mat(0x8ee5f5,{roughness:.45,metalness:.05}), rock:mat(0x777d88), cactus:mat(0x287b45), crystal:mat(0x9c65e8,{roughness:.35,metalness:.12}),
+ jungle:mat(0x286c39), swamp:mat(0x526f45), autumn:mat(0xb86a32), flower:mat(0x78b85a),
+ darkstone:mat(0x4c515f), clay:mat(0xb56f57), moss:mat(0x587c55), ocean:mat(0x4b9fc5,{roughness:.42})
 };
 const cubeGeo=new THREE.BoxGeometry(1,1,1);const blocks=new Map();const raycaster=new THREE.Raycaster();const pointer=new THREE.Vector2();
 let mode='build', nick='Visitante', selectedType='grass';
@@ -80,29 +82,37 @@ function makeBlock(x,y,z,type='grass',owner='Mundo'){
  const mesh=new THREE.Mesh(cubeGeo,materials[type]||materials.grass);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData={x,y,z,type,owner};scene.add(mesh);blocks.set(k,mesh);
 }
 function removeBlock(x,y,z){const k=key(x,y,z),m=blocks.get(k);if(!m)return false;scene.remove(m);m.geometry.dispose();blocks.delete(k);return true}
-function saveLocal(){const data=[...blocks.values()].map(m=>m.userData);localStorage.setItem('mundo_blocks_v4_100k',JSON.stringify(data));document.getElementById('blockCount').textContent='100.000'}
+function saveLocal(){const data=[...blocks.values()].map(m=>m.userData);localStorage.setItem('mundo_blocks_v5_200k',JSON.stringify(data));document.getElementById('blockCount').textContent='200.000'}
 function loadWorld(){
- const stored=localStorage.getItem('mundo_blocks_v4_100k');
+ const stored=localStorage.getItem('mundo_blocks_v5_200k');
  if(stored){try{JSON.parse(stored).forEach(b=>makeBlock(b.x,b.y,b.z,b.type,b.owner));}catch{}}
  else {
-  // Terreno de 100.000 blocos desenhado com InstancedMesh para funcionar melhor no celular.
-  // 316 x 316 = 99.856 blocos; os 144 restantes completam 100.000.
-  const terrainSize=316, half=158, terrainCount=terrainSize*terrainSize;
-  const biomeMats=[materials.grass,materials.snow,materials.sand,materials.rock];
-  const biomeCounts=[0,0,0,0];
-  for(let b=0;b<4;b++){
-   const inst=new THREE.InstancedMesh(cubeGeo,biomeMats[b],terrainCount);
-   inst.receiveShadow=true; const dummy=new THREE.Object3D(); let n=0;
-   for(let x=-half;x<half;x++)for(let z=-half;z<half;z++){
-    let biome=(x<0?(z<0?0:2):(z<0?1:3));
-    if(Math.abs(x)<=1||Math.abs(z)<=1)biome=0;
-    if(biome!==b)continue;
-    dummy.position.set(x,0,z);dummy.updateMatrix();inst.setMatrixAt(n++,dummy.matrix);
-   }
-   inst.count=n;inst.instanceMatrix.needsUpdate=true;scene.add(inst);biomeCounts[b]=n;
+  // Terreno de exatamente 200.000 blocos-base: 447 x 447 = 199.809, mais 191 blocos.
+  // InstancedMesh reduz o custo de renderização para celulares.
+  const terrainSize=447, half=223, terrainCount=terrainSize*terrainSize;
+  const biomeMats=[materials.grass,materials.snow,materials.sand,materials.rock,materials.jungle,materials.swamp,materials.autumn,materials.darkstone];
+  const biomeCounts=Array(8).fill(0);
+  const instances=biomeMats.map(m=>{const mesh=new THREE.InstancedMesh(cubeGeo,m,terrainCount);mesh.receiveShadow=true;scene.add(mesh);return mesh;});
+  const dummies=Array.from({length:8},()=>new THREE.Object3D());
+  function biomeAt(x,z){
+    // Quatro regiões principais e quatro biomas adicionais em bolsões naturais.
+    let b=(x<0?(z<0?0:2):(z<0?1:3));
+    if(Math.abs(x)<=1||Math.abs(z)<=1)b=0;
+    if((x>-90&&x<-35&&z>-90&&z<-35)||(x>45&&x<95&&z>35&&z<95))b=4; // selva
+    if(x>-95&&x<-45&&z>45&&z<105)b=5; // pântano
+    if(x>35&&x<100&&z<-40&&z>-105)b=6; // floresta de outono
+    if(x>70&&x<125&&z>5&&z<65)b=7; // terras de pedra escura
+    if(x>-140&&x<-110&&z>-15&&z<45)b=7;
+    return b;
   }
-  // 144 blocos adicionais do terreno ficam distribuídos junto ao centro para completar 100.000.
-  for(let i=0;i<144;i++){const x=-6+(i%12),z=-6+Math.floor(i/12);makeBlock(x,0,z,'grass','Terreno');}
+  for(let x=-half;x<half+1;x++)for(let z=-half;z<half+1;z++){
+    const b=biomeAt(x,z),obj=dummies[b];obj.position.set(x,0,z);obj.updateMatrix();instances[b].setMatrixAt(biomeCounts[b]++,obj.matrix);
+  }
+  for(let b=0;b<instances.length;b++){instances[b].count=biomeCounts[b];instances[b].instanceMatrix.needsUpdate=true;}
+  // 191 blocos adicionais completam exatamente 200.000 blocos de terreno.
+  for(let i=0;i<191;i++){const x=-7+(i%14),z=-7+Math.floor(i/14);makeBlock(x,0,z,'grass','Terreno');}
+  // Bolsões de flores e musgo para dar variedade sem exagerar nas texturas.
+  for(const [x,z,t] of [[-25,-20,'flower'],[-28,-17,'flower'],[-22,-23,'moss'],[-72,65,'swamp'],[63,-67,'autumn'],[90,25,'darkstone'],[84,32,'darkstone'],[-68,-60,'jungle']])makeBlock(x,1,z,t,'Mundo');
   // Árvores cúbicas na floresta
   for(const [tx,tz] of [[-18,-16],[-12,-8],[-20,-3],[-7,-17],[-4,-10],[-15,-21]]){
    for(let y=1;y<=3;y++)makeBlock(tx,y,tz,'wood','Mundo');
@@ -168,14 +178,14 @@ function loadWorld(){
   for(const [x,z] of [[-3,2],[3,2],[-3,8],[3,8]])makeBlock(x,2,z,'stone','Mundo');
   saveLocal();
  }
- document.getElementById('blockCount').textContent='100.000';
+ document.getElementById('blockCount').textContent='200.000';
 }
 loadWorld();
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.style.display='none',2400)}
 function updateMode(next){mode=next;document.getElementById('buildMode').classList.toggle('active',mode==='build');document.getElementById('breakMode').classList.toggle('active',mode==='break');document.getElementById('status').textContent=mode==='build'?'Construir: clique no chão ou na face de um bloco para colocar outro.':'Destruir: clique no bloco que deseja remover.'}
 document.getElementById('buildMode').onclick=()=>updateMode('build');
 document.getElementById('breakMode').onclick=()=>updateMode('break');
-document.getElementById('reset').onclick=()=>{if(!confirm('Apagar e recriar o mapa salvo neste navegador?'))return;for(const m of blocks.values())scene.remove(m);blocks.clear();localStorage.removeItem('mundo_blocks_v4_100k');loadWorld();showToast('Mapa local reiniciado.')};
+document.getElementById('reset').onclick=()=>{if(!confirm('Apagar e recriar o mapa salvo neste navegador?'))return;for(const m of blocks.values())scene.remove(m);blocks.clear();localStorage.removeItem('mundo_blocks_v5_200k');loadWorld();showToast('Mapa local reiniciado.')};
 renderer.domElement.addEventListener('pointerdown',e=>{
  if(e.target.closest&&e.target.closest('.panel'))return;
  const rect=renderer.domElement.getBoundingClientRect();pointer.x=((e.clientX-rect.left)/rect.width)*2-1;pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meu Mundo — Mundo dos Seguidores</title>
+<style>
+:root{--panel:rgba(15,25,38,.92);--line:#35516a;--text:#f4f7fb;--muted:#b7c8d8;--green:#75e28a}
+*{box-sizing:border-box}body{margin:0;background:#83b5ff;color:var(--text);font-family:system-ui,Arial,sans-serif;overflow:hidden}
+#game{position:fixed;inset:0}canvas{display:block}
+.panel{position:fixed;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 8px 24px #0003;backdrop-filter:blur(6px)}
+#brand{top:12px;left:12px;max-width:calc(100vw - 24px)}h1{font-size:19px;margin:0 0 4px}p{margin:4px 0;color:var(--muted);font-size:13px}
+#stats{top:12px;right:12px;min-width:150px}#stats strong{color:var(--green);font-size:21px}
+#controls{bottom:12px;left:50%;transform:translateX(-50%);width:min(540px,calc(100vw - 24px));text-align:center}
+input,button{font:inherit;border-radius:8px;border:1px solid #4c6983;padding:9px 10px}
+input{background:#172738;color:white;width:145px;max-width:45vw}button{background:#315d46;color:white;cursor:pointer;font-weight:650}button.secondary{background:#24394d}button.active{outline:2px solid #b5f3c0}
+.row{display:flex;gap:7px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:8px}
+#status{font-size:12px;color:#c5d8e8;margin-top:7px}
+#help{bottom:12px;right:12px;max-width:205px;font-size:12px}
+#toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#172738ed;border:1px solid var(--line);padding:10px 14px;border-radius:9px;display:none;max-width:90vw}
+@media(max-width:600px){#stats{top:90px;right:12px}#youtubePanel{top:155px!important;max-height:32vh!important;width:190px!important;font-size:12px;padding:8px}#youtubePanel button{font-size:11px;padding:7px 4px}#youtubePanel p{font-size:11px}#help{display:none}#controls{bottom:8px}h1{font-size:17px}#brand p{max-width:210px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="brand" class="panel"><h1>🌎 MEU MUNDO</h1><p>Um mundo 3D para construir com seus seguidores</p></div>
+<div id="stats" class="panel"><p>BLOCOS NO MUNDO</p><strong id="blockCount">—</strong><p>Seu nick: <span id="nickLabel">Visitante</span></p></div>
+<div id="controls" class="panel">
+  <div class="row" style="margin-top:0">
+    <input id="nick" maxlength="20" placeholder="Seu nick" aria-label="Seu nick">
+    <button id="saveNick" class="secondary">Entrar</button>
+    <button id="buildMode" class="active">🧱 Construir</button>
+    <button id="breakMode" class="secondary">⛏️ Destruir</button>
+  </div>
+  <div id="status">Modo de demonstração: o mapa fica salvo neste navegador.</div>
+  <div class="row"><button id="reset" class="secondary">Reiniciar mapa local</button></div>
+</div>
+<div id="help" class="panel">🖱️ Arraste para girar a câmera.<br>🔍 Use a roda para aproximar.<br>🧱 Clique no chão para colocar bloco.<br>⛏️ No modo destruir, clique em um bloco.</div>
+
+<div id="youtubePanel" class="panel" style="top:150px;left:12px;width:min(310px,calc(100vw - 24px));max-height:48vh;overflow:auto">
+  <h1>▶️ CriativoVIP</h1>
+  <p>Eventos do canal • modo de teste</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px">
+    <button id="demoBoom" style="background:#9b3a32">💥 Comentário 💥</button>
+    <button id="demoComment" class="secondary">💬 Comentário comum</button>
+    <button id="demoLike" style="background:#9b6a22">👍 Simular like</button>
+    <button id="demoSub" style="background:#315d46">⭐ Simular inscrito</button>
+  </div>
+  <p style="margin-top:9px">💥 Emoji: −50 blocos<br>💬 Comentário comum: −25 blocos<br>👍 Like: TNT + −5 a 15 blocos<br>⭐ Inscrito: −5 blocos</p>
+  <div id="eventFeed" style="font-size:12px;line-height:1.45;margin-top:8px;color:#d8e7f4">Aguardando eventos de teste…</div>
+</div>
+
+<div id="toast"></div>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const mount=document.getElementById('game');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x83b5ff); scene.fog=new THREE.Fog(0x83b5ff,28,70);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,150);camera.position.set(18,20,24);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;mount.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,2,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.48;controls.minDistance=8;controls.maxDistance=48;
+scene.add(new THREE.HemisphereLight(0xd9edff,0x526343,2.0));
+const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-12,25,14);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
+const materials={
+ grass:new THREE.MeshStandardMaterial({color:0x66a94f}), dirt:new THREE.MeshStandardMaterial({color:0x8c5b39}),
+ stone:new THREE.MeshStandardMaterial({color:0x89949d}), wood:new THREE.MeshStandardMaterial({color:0x86552e}),
+ leaves:new THREE.MeshStandardMaterial({color:0x317c43}), pink:new THREE.MeshStandardMaterial({color:0xe8a5ce}),
+ sand:new THREE.MeshStandardMaterial({color:0xd9c17b}), orange:new THREE.MeshStandardMaterial({color:0xc47739})
+};
+const cubeGeo=new THREE.BoxGeometry(1,1,1);const blocks=new Map();const raycaster=new THREE.Raycaster();const pointer=new THREE.Vector2();
+let mode='build', nick=localStorage.getItem('mundo_nick')||'', selectedType='grass';
+document.getElementById('nick').value=nick;document.getElementById('nickLabel').textContent=nick||'Visitante';
+const key=(x,y,z)=>`${x},${y},${z}`;
+function makeBlock(x,y,z,type='grass',owner='Mundo'){
+ const k=key(x,y,z);if(blocks.has(k))return;
+ const mesh=new THREE.Mesh(cubeGeo,materials[type]||materials.grass);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData={x,y,z,type,owner};scene.add(mesh);blocks.set(k,mesh);
+}
+function removeBlock(x,y,z){const k=key(x,y,z),m=blocks.get(k);if(!m)return false;scene.remove(m);m.geometry.dispose();blocks.delete(k);return true}
+function saveLocal(){const data=[...blocks.values()].map(m=>m.userData);localStorage.setItem('mundo_blocks',JSON.stringify(data));document.getElementById('blockCount').textContent=blocks.size.toLocaleString('pt-BR')}
+function loadWorld(){
+ const stored=localStorage.getItem('mundo_blocks');
+ if(stored){try{JSON.parse(stored).forEach(b=>makeBlock(b.x,b.y,b.z,b.type,b.owner));}catch{}}
+ else {
+  for(let x=-9;x<=9;x++)for(let z=-9;z<=9;z++){
+   let type='grass';if(x<-4&&z<1)type='pink';else if(x>5&&z<-3)type='stone';else if(z>5&&x>0)type='orange';else if(Math.abs(x)<2&&Math.abs(z)<2)type='sand';
+   makeBlock(x,0,z,type,'Mundo');
+  }
+  // árvores simples para dar vida ao mapa
+  for(const [tx,tz,leaf] of [[-6,-5,'pink'],[-7,2,'pink'],[6,1,'leaves'],[3,-6,'leaves'],[-2,7,'leaves'],[8,5,'leaves']]){
+   for(let y=1;y<=3;y++)makeBlock(tx,y,tz,'wood','Mundo');
+   for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)for(let dy=2;dy<=4;dy++)if(Math.abs(dx)+Math.abs(dz)+(dy===4?1:0)<4)makeBlock(tx+dx,dy,tz+dz,leaf,'Mundo');
+  }
+  saveLocal();
+ }
+ document.getElementById('blockCount').textContent=blocks.size.toLocaleString('pt-BR');
+}
+loadWorld();
+function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.style.display='none',2400)}
+function updateMode(next){mode=next;document.getElementById('buildMode').classList.toggle('active',mode==='build');document.getElementById('breakMode').classList.toggle('active',mode==='break');document.getElementById('status').textContent=mode==='build'?'Construir: clique no chão ou na face de um bloco para colocar outro.':'Destruir: clique no bloco que deseja remover.'}
+document.getElementById('buildMode').onclick=()=>updateMode('build');
+document.getElementById('breakMode').onclick=()=>updateMode('break');
+document.getElementById('saveNick').onclick=()=>{nick=document.getElementById('nick').value.trim().slice(0,20);if(!nick){showToast('Digite um nick primeiro.');return}localStorage.setItem('mundo_nick',nick);document.getElementById('nickLabel').textContent=nick;showToast('Bem-vindo ao mundo, '+nick+'!')};
+document.getElementById('reset').onclick=()=>{if(!confirm('Apagar e recriar o mapa salvo neste navegador?'))return;for(const m of blocks.values())scene.remove(m);blocks.clear();localStorage.removeItem('mundo_blocks');loadWorld();showToast('Mapa local reiniciado.')};
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(e.target.closest&&e.target.closest('.panel'))return;
+ const rect=renderer.domElement.getBoundingClientRect();pointer.x=((e.clientX-rect.left)/rect.width)*2-1;pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+ raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...blocks.values()],false);
+ if(mode==='break'){if(hits.length){const d=hits[0].object.userData;if(d.y===0){showToast('O chão inicial não pode ser removido.');return}removeBlock(d.x,d.y,d.z);saveLocal()}return}
+ if(hits.length){const hit=hits[0],p=hit.object.position,n=hit.face.normal;makeBlock(Math.round(p.x+n.x),Math.round(p.y+n.y),Math.round(p.z+n.z),selectedType,nick||'Visitante')}
+ else {const groundY=0;const plane=new THREE.Plane(new THREE.Vector3(0,1,0),-.5);const pt=new THREE.Vector3();if(raycaster.ray.intersectPlane(plane,pt)){makeBlock(Math.round(pt.x),0,Math.round(pt.z),selectedType,nick||'Visitante')}}
+ saveLocal();
+});
+
+const feed=document.getElementById('eventFeed');
+function addFeed(text){
+  const time=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const line=document.createElement('div');line.textContent=`[${time}] ${text}`;
+  feed.prepend(line);while(feed.children.length>5)feed.lastElementChild.remove();
+}
+function removeRandomBlocks(amount){
+  const removable=[...blocks.values()].filter(m=>m.userData.y>0);
+  // Shuffle so each event affects random blocks, without removing the initial ground.
+  for(let i=removable.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[removable[i],removable[j]]=[removable[j],removable[i]];}
+  const chosen=removable.slice(0,Math.min(amount,removable.length));
+  for(const m of chosen){const d=m.userData;removeBlock(d.x,d.y,d.z);}
+  saveLocal();return chosen.length;
+}
+function spawnTNT(){
+  const tntMat=new THREE.MeshStandardMaterial({color:0xd52f2f,emissive:0x3b0000});
+  const mesh=new THREE.Mesh(cubeGeo,tntMat);
+  const x=Math.floor(Math.random()*13)-6,z=Math.floor(Math.random()*13)-6;
+  mesh.position.set(x,2.5,z);mesh.castShadow=true;scene.add(mesh);
+  const labelCanvas=document.createElement('canvas');labelCanvas.width=128;labelCanvas.height=64;
+  const ctx=labelCanvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.font='bold 30px Arial';ctx.textAlign='center';ctx.fillText('TNT',64,42);
+  const tex=new THREE.CanvasTexture(labelCanvas);
+  const label=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+  label.position.set(x,3.5,z);label.scale.set(1.4,.7,1);scene.add(label);
+  showToast('🧨 TNT apareceu no mundo!');
+  setTimeout(()=>{scene.remove(mesh);scene.remove(label);tntMat.dispose();tex.dispose();const removed=removeRandomBlocks(5+Math.floor(Math.random()*11));addFeed('👍 Like → TNT! '+removed+' blocos removidos.');showToast('💥 TNT! '+removed+' blocos removidos.');},1100);
+}
+document.getElementById('demoBoom').onclick=()=>{const removed=removeRandomBlocks(50);addFeed('💥 Comentário com 💥 → '+removed+' blocos removidos.');showToast('💥 Comentário explosivo: '+removed+' blocos!');};
+document.getElementById('demoComment').onclick=()=>{const removed=removeRandomBlocks(25);addFeed('💬 Comentário comum → '+removed+' blocos removidos.');showToast('💬 Comentário comum: '+removed+' blocos!');};
+document.getElementById('demoLike').onclick=()=>spawnTNT();
+document.getElementById('demoSub').onclick=()=>{const removed=removeRandomBlocks(5);addFeed('⭐ Novo inscrito → '+removed+' blocos removidos.');showToast('⭐ Novo inscrito: '+removed+' blocos!');};
+
+function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>

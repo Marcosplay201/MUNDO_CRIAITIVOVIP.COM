@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Meu Mundo — Mundo dos Seguidores</title>
+<title>Mundo do CriativoVIP — 4 Biomas</title>
 <style>
 :root{--panel:rgba(15,25,38,.92);--line:#35516a;--text:#f4f7fb;--muted:#b7c8d8;--green:#75e28a}
 *{box-sizing:border-box}body{margin:0;background:#83b5ff;color:var(--text);font-family:system-ui,Arial,sans-serif;overflow:hidden}
@@ -17,22 +17,22 @@ input{background:#172738;color:white;width:145px;max-width:45vw}button{backgroun
 .row{display:flex;gap:7px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:8px}
 #status{font-size:12px;color:#c5d8e8;margin-top:7px}
 #help{bottom:12px;right:12px;max-width:205px;font-size:12px}
-#toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#172738ed;border:1px solid var(--line);padding:10px 14px;border-radius:9px;display:none;max-width:90vw}
+#profile{display:none;z-index:20;left:50%;top:50%;transform:translate(-50%,-50%);width:min(330px,calc(100vw - 28px))}#profile h2{margin:0 0 8px;font-size:18px}#profileClose{float:right}#profile p{line-height:1.45}#avatarChoice{width:auto;max-width:100%}#evilLevel{width:100%;max-width:none;padding:0}#watermark{position:fixed;bottom:4px;left:50%;transform:translateX(-50%);font-size:10px;color:#fff;background:#101923bd;padding:4px 8px;border-radius:5px;text-align:center;max-width:96vw;z-index:5;pointer-events:none;white-space:normal}#toast{position:fixed;top:90px;left:50%;transform:translateX(-50%);background:#172738ed;border:1px solid var(--line);padding:10px 14px;border-radius:9px;display:none;max-width:90vw}
 @media(max-width:600px){#stats{top:90px;right:12px}#youtubePanel{top:155px!important;max-height:32vh!important;width:190px!important;font-size:12px;padding:8px}#youtubePanel button{font-size:11px;padding:7px 4px}#youtubePanel p{font-size:11px}#help{display:none}#controls{bottom:8px}h1{font-size:17px}#brand p{max-width:210px}}
 </style>
 </head>
 <body>
 <div id="game"></div>
-<div id="brand" class="panel"><h1>🌎 MEU MUNDO</h1><p>Um mundo 3D para construir com seus seguidores</p></div>
+<div id="brand" class="panel"><h1>🌎 MUNDO DO CRIATIVOVIP</h1><p>Explore 4 biomas: floresta, gelo, deserto e montanhas</p></div>
 <div id="stats" class="panel"><p>BLOCOS NO MUNDO</p><strong id="blockCount">—</strong><p>Seu nick: <span id="nickLabel">Visitante</span></p></div>
 <div id="controls" class="panel">
   <div class="row" style="margin-top:0">
-    <input id="nick" maxlength="20" placeholder="Seu nick" aria-label="Seu nick">
+    <input id="nick" maxlength="20" placeholder="Seu nick" aria-label="Seu nick"><select id="avatarChoice" aria-label="Escolha seu personagem" style="background:#172738;color:white;border:1px solid #4c6983;border-radius:8px;padding:9px"><option value="steve">Steve</option><option value="alex">Alex</option></select>
     <button id="saveNick" class="secondary">Entrar</button>
     <button id="buildMode" class="active">🧱 Construir</button>
     <button id="breakMode" class="secondary">⛏️ Destruir</button>
   </div>
-  <div id="status">Modo de demonstração: o mapa fica salvo neste navegador.</div>
+  <div id="status">Escolha Steve ou Alex, entre com seu nick e explore o mundo. Clique num personagem para ver o perfil.</div>
   <div class="row"><button id="reset" class="secondary">Reiniciar mapa local</button></div>
 </div>
 <div id="help" class="panel">🖱️ Arraste para girar a câmera.<br>🔍 Use a roda para aproximar.<br>🧱 Clique no chão para colocar bloco.<br>⛏️ No modo destruir, clique em um bloco.</div>
@@ -50,6 +50,8 @@ input{background:#172738;color:white;width:145px;max-width:45vw}button{backgroun
   <div id="eventFeed" style="font-size:12px;line-height:1.45;margin-top:8px;color:#d8e7f4">Aguardando eventos de teste…</div>
 </div>
 
+<div id="profile" class="panel"><button id="profileClose" class="secondary">Fechar</button><h2 id="profileName">Personagem</h2><p id="profileAvatar"></p><p id="profileGoodness"></p><p id="profileEvil"></p><div id="ownProfileControls" style="display:none"><p>Seu nível de maldade: <strong id="evilValue">15%</strong></p><input id="evilLevel" type="range" min="0" max="100" value="15"><button id="saveProfile">Salvar perfil</button></div></div>
+<div id="watermark">Mundo do CriativoVIP é um projeto independente, não oficial e não afiliado à Mojang ou à Microsoft. Minecraft é uma marca de seus respectivos titulares.</div>
 <div id="toast"></div>
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"}}
@@ -59,17 +61,19 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const mount=document.getElementById('game');
-const scene=new THREE.Scene(); scene.background=new THREE.Color(0x83b5ff); scene.fog=new THREE.Fog(0x83b5ff,28,70);
-const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,150);camera.position.set(18,20,24);
-const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;mount.appendChild(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,2,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.48;controls.minDistance=8;controls.maxDistance=48;
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x83b5ff); scene.fog=new THREE.Fog(0x83b5ff,45,110);
+const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,300);camera.position.set(30,27,38);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=false;mount.appendChild(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,2,0);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.48;controls.minDistance=8;controls.maxDistance=100;
 scene.add(new THREE.HemisphereLight(0xd9edff,0x526343,2.0));
-const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-12,25,14);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
+const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-12,25,14);sun.castShadow=false;scene.add(sun);
 const materials={
  grass:new THREE.MeshStandardMaterial({color:0x66a94f}), dirt:new THREE.MeshStandardMaterial({color:0x8c5b39}),
  stone:new THREE.MeshStandardMaterial({color:0x89949d}), wood:new THREE.MeshStandardMaterial({color:0x86552e}),
  leaves:new THREE.MeshStandardMaterial({color:0x317c43}), pink:new THREE.MeshStandardMaterial({color:0xe8a5ce}),
- sand:new THREE.MeshStandardMaterial({color:0xd9c17b}), orange:new THREE.MeshStandardMaterial({color:0xc47739})
+ sand:new THREE.MeshStandardMaterial({color:0xd9c17b}), orange:new THREE.MeshStandardMaterial({color:0xc47739}),
+ snow:new THREE.MeshStandardMaterial({color:0xf1f7ff}), ice:new THREE.MeshStandardMaterial({color:0x8ee5f5}),
+ rock:new THREE.MeshStandardMaterial({color:0x777d88}), cactus:new THREE.MeshStandardMaterial({color:0x287b45})
 };
 const cubeGeo=new THREE.BoxGeometry(1,1,1);const blocks=new Map();const raycaster=new THREE.Raycaster();const pointer=new THREE.Vector2();
 let mode='build', nick=localStorage.getItem('mundo_nick')||'', selectedType='grass';
@@ -80,35 +84,99 @@ function makeBlock(x,y,z,type='grass',owner='Mundo'){
  const mesh=new THREE.Mesh(cubeGeo,materials[type]||materials.grass);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData={x,y,z,type,owner};scene.add(mesh);blocks.set(k,mesh);
 }
 function removeBlock(x,y,z){const k=key(x,y,z),m=blocks.get(k);if(!m)return false;scene.remove(m);m.geometry.dispose();blocks.delete(k);return true}
-function saveLocal(){const data=[...blocks.values()].map(m=>m.userData);localStorage.setItem('mundo_blocks',JSON.stringify(data));document.getElementById('blockCount').textContent=blocks.size.toLocaleString('pt-BR')}
+function saveLocal(){const data=[...blocks.values()].map(m=>m.userData);localStorage.setItem('mundo_blocks_v2',JSON.stringify(data));document.getElementById('blockCount').textContent=blocks.size.toLocaleString('pt-BR')}
 function loadWorld(){
- const stored=localStorage.getItem('mundo_blocks');
+ const stored=localStorage.getItem('mundo_blocks_v2');
  if(stored){try{JSON.parse(stored).forEach(b=>makeBlock(b.x,b.y,b.z,b.type,b.owner));}catch{}}
  else {
-  for(let x=-9;x<=9;x++)for(let z=-9;z<=9;z++){
-   let type='grass';if(x<-4&&z<1)type='pink';else if(x>5&&z<-3)type='stone';else if(z>5&&x>0)type='orange';else if(Math.abs(x)<2&&Math.abs(z)<2)type='sand';
+  // Mundo maior com quatro biomas distintos, em quadrantes.
+  for(let x=-24;x<=24;x++)for(let z=-24;z<=24;z++){
+   let type='grass';
+   if(x < -1 && z < -1) type='grass';                 // Floresta
+   else if(x >= -1 && z < -1) type='snow';            // Gelo
+   else if(x < -1 && z >= -1) type='sand';            // Deserto
+   else type='rock';                                  // Montanhas
+   // Pequenas transições de terreno entre os biomas
+   if(Math.abs(x)<=1 || Math.abs(z)<=1) type='dirt';
    makeBlock(x,0,z,type,'Mundo');
   }
-  // árvores simples para dar vida ao mapa
-  for(const [tx,tz,leaf] of [[-6,-5,'pink'],[-7,2,'pink'],[6,1,'leaves'],[3,-6,'leaves'],[-2,7,'leaves'],[8,5,'leaves']]){
+  // Árvores cúbicas na floresta
+  for(const [tx,tz] of [[-18,-16],[-12,-8],[-20,-3],[-7,-17],[-4,-10],[-15,-21]]){
    for(let y=1;y<=3;y++)makeBlock(tx,y,tz,'wood','Mundo');
-   for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)for(let dy=2;dy<=4;dy++)if(Math.abs(dx)+Math.abs(dz)+(dy===4?1:0)<4)makeBlock(tx+dx,dy,tz+dz,leaf,'Mundo');
+   for(let dx=-2;dx<=2;dx++)for(let dz=-2;dz<=2;dz++)for(let dy=2;dy<=4;dy++)if(Math.abs(dx)+Math.abs(dz)+(dy===4?1:0)<5)makeBlock(tx+dx,dy,tz+dz,'leaves','Mundo');
+  }
+  // Formações de gelo
+  for(const [tx,tz] of [[5,-17],[15,-11],[21,-20],[8,-5]]){
+   makeBlock(tx,1,tz,'ice','Mundo'); makeBlock(tx,2,tz,'ice','Mundo'); makeBlock(tx,3,tz,'snow','Mundo');
+  }
+  // Cactos no deserto
+  for(const [tx,tz] of [[-18,5],[-11,13],[-20,20],[-5,8],[-7,21]]){
+   makeBlock(tx,1,tz,'cactus','Mundo'); makeBlock(tx,2,tz,'cactus','Mundo');
+   if((tx+tz)%2===0)makeBlock(tx+1,2,tz,'cactus','Mundo');
+  }
+  // Picos escalonados nas montanhas
+  for(const [cx,cz,h] of [[8,8,5],[17,13,7],[22,4,4],[8,21,6],[18,22,5]]){
+   for(let y=1;y<=h;y++)for(let dx=-Math.max(1,Math.floor((h-y)/2));dx<=Math.max(1,Math.floor((h-y)/2));dx++)for(let dz=-Math.max(1,Math.floor((h-y)/2));dz<=Math.max(1,Math.floor((h-y)/2));dz++)makeBlock(cx+dx,y,cz+dz,y===h?'snow':'rock','Mundo');
   }
   saveLocal();
  }
  document.getElementById('blockCount').textContent=blocks.size.toLocaleString('pt-BR');
 }
 loadWorld();
+// Mini personagens estilo voxel com nomes e indicadores de bondade/maldade.
+function makeNameTag(name, goodness, evil){
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=160;
+ const ctx=canvas.getContext('2d');ctx.fillStyle='rgba(15,25,38,0.92)';ctx.beginPath();ctx.roundRect(8,8,496,144,22);ctx.fill();
+ ctx.strokeStyle='#b8d6ec';ctx.lineWidth=4;ctx.stroke();ctx.fillStyle='#ffffff';ctx.font='bold 42px Arial';ctx.textAlign='center';ctx.fillText(name,256,58);
+ ctx.font='bold 25px Arial';ctx.fillStyle='#78e08f';ctx.fillText('Bondade '+goodness+'%',135,103);ctx.fillStyle='#ff7777';ctx.fillText('Maldade '+evil+'%',372,103);
+ ctx.fillStyle='#3a3a3a';ctx.fillRect(46,119,420,13);ctx.fillStyle='#62d879';ctx.fillRect(46,119,420*goodness/100,13);ctx.fillStyle='#ef6262';ctx.fillRect(46,137,420*evil/100,7);
+ const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
+ const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));sprite.scale.set(4.4,1.38,1);return sprite;
+}
+function makeVoxelPerson(name, x, z, shirtColor, hairColor, goodness, evil, alex=false, isLocal=false){
+ const person=new THREE.Group();
+ const mat=c=>new THREE.MeshStandardMaterial({color:c,roughness:.9});
+ const bodyMat=mat(shirtColor), headMat=mat(alex?0xe2ad7d:hairColor), skinMat=mat(0xf0c6a0), eyeMat=mat(alex?0x2b5c38:0x3155c8), pantsMat=mat(alex?0x477e4d:0x354f87), mouthMat=mat(0x754b3b);
+ const cube=(w,h,d,m,px,py,pz)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(px,py,pz);o.castShadow=false;o.receiveShadow=false;person.add(o);return o};
+ cube(1.05,1.05,.72,bodyMat,0,1.05,0);
+ const head=cube(.72,.72,.72,headMat,0,2.0,0);
+ // face on front
+ cube(.12,.12,.035,eyeMat,-.17,2.05,.38);cube(.12,.12,.035,eyeMat,.17,2.05,.38);cube(.22,.07,.035,mouthMat,0,1.84,.385);
+ if(!alex) cube(.74,.18,.74,headMat,0,2.42,0); else cube(.74,.16,.74,mat(0xd97824),0,2.42,0);
+ const armL=cube(.25,.85,.28,skinMat,-.68,1.05,0), armR=cube(.25,.85,.28,skinMat,.68,1.05,0);
+ const legL=cube(.34,.7,.34,pantsMat,-.25,.35,0), legR=cube(.34,.7,.34,pantsMat,.25,.35,0);
+ person.position.set(x,0,z);scene.add(person);
+ const tag=makeNameTag(name,goodness,evil);tag.position.set(x,3.35,z);scene.add(tag);
+ person.userData={name,goodness,evil,tag,phase:Math.random()*Math.PI*2,legL,legR,armL,armR,targetX:x,targetZ:z,walkTimer:Math.random()*3,isLocal,avatar:alex?'Alex':'Steve'};
+ walkers.push(person);return person;
+}
+const walkers=[];
+const steve=makeVoxelPerson('Steve',-10,-4,0x2874c8,0x49301f,85,15,false,false);
+const alex=makeVoxelPerson('Alex',5,-4,0x287c49,0xc56b2b,70,30,true,false);
+let localPlayer=null;
+function openProfile(p){
+ const d=p.userData;document.getElementById('profileName').textContent=d.name;
+ document.getElementById('profileAvatar').textContent='Personagem: '+d.avatar;
+ document.getElementById('profileGoodness').textContent='Bondade: '+d.goodness+'%';
+ document.getElementById('profileEvil').textContent='Maldade: '+d.evil+'%';
+ document.getElementById('ownProfileControls').style.display=d.isLocal?'block':'none';
+ if(d.isLocal){document.getElementById('evilLevel').value=d.evil;document.getElementById('evilValue').textContent=d.evil+'%';}
+ document.getElementById('profile').style.display='block';
+}
+document.getElementById('profileClose').onclick=()=>document.getElementById('profile').style.display='none';
+document.getElementById('evilLevel').oninput=e=>document.getElementById('evilValue').textContent=e.target.value+'%';
+document.getElementById('saveProfile').onclick=()=>{if(!localPlayer)return;const d=localPlayer.userData;d.evil=Number(document.getElementById('evilLevel').value);d.goodness=100-d.evil;scene.remove(d.tag);d.tag.material.map.dispose();d.tag.material.dispose();d.tag=makeNameTag(d.name,d.goodness,d.evil);d.tag.position.set(localPlayer.position.x,3.35,localPlayer.position.z);document.getElementById('profileGoodness').textContent='Bondade: '+d.goodness+'%';document.getElementById('profileEvil').textContent='Maldade: '+d.evil+'%';showToast('Perfil salvo neste navegador.');};
+function chooseTarget(p){const d=p.userData;d.targetX=Math.max(-22,Math.min(22,p.position.x+(Math.random()*16-8)));d.targetZ=Math.max(-22,Math.min(22,p.position.z+(Math.random()*16-8)));d.walkTimer=2+Math.random()*5;}
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>el.style.display='none',2400)}
 function updateMode(next){mode=next;document.getElementById('buildMode').classList.toggle('active',mode==='build');document.getElementById('breakMode').classList.toggle('active',mode==='break');document.getElementById('status').textContent=mode==='build'?'Construir: clique no chão ou na face de um bloco para colocar outro.':'Destruir: clique no bloco que deseja remover.'}
 document.getElementById('buildMode').onclick=()=>updateMode('build');
 document.getElementById('breakMode').onclick=()=>updateMode('break');
-document.getElementById('saveNick').onclick=()=>{nick=document.getElementById('nick').value.trim().slice(0,20);if(!nick){showToast('Digite um nick primeiro.');return}localStorage.setItem('mundo_nick',nick);document.getElementById('nickLabel').textContent=nick;showToast('Bem-vindo ao mundo, '+nick+'!')};
-document.getElementById('reset').onclick=()=>{if(!confirm('Apagar e recriar o mapa salvo neste navegador?'))return;for(const m of blocks.values())scene.remove(m);blocks.clear();localStorage.removeItem('mundo_blocks');loadWorld();showToast('Mapa local reiniciado.')};
+document.getElementById('saveNick').onclick=()=>{nick=document.getElementById('nick').value.trim().slice(0,20);if(!nick){showToast('Digite um nick primeiro.');return}localStorage.setItem('mundo_nick',nick);document.getElementById('nickLabel').textContent=nick;if(localPlayer){scene.remove(localPlayer);scene.remove(localPlayer.userData.tag);walkers.splice(walkers.indexOf(localPlayer),1)}const isAlex=document.getElementById('avatarChoice').value==='alex';localPlayer=makeVoxelPerson(nick,0,0,isAlex?0x287c49:0x2874c8,isAlex?0xc56b2b:0x49301f,85,15,isAlex,true);showToast('Bem-vindo ao mundo, '+nick+'! Seu personagem já pode andar.');};
+document.getElementById('reset').onclick=()=>{if(!confirm('Apagar e recriar o mapa salvo neste navegador?'))return;for(const m of blocks.values())scene.remove(m);blocks.clear();localStorage.removeItem('mundo_blocks_v2');loadWorld();showToast('Mapa local reiniciado.')};
 renderer.domElement.addEventListener('pointerdown',e=>{
  if(e.target.closest&&e.target.closest('.panel'))return;
  const rect=renderer.domElement.getBoundingClientRect();pointer.x=((e.clientX-rect.left)/rect.width)*2-1;pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
- raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...blocks.values()],false);
+ raycaster.setFromCamera(pointer,camera);const personHits=raycaster.intersectObjects(walkers.flatMap(p=>p.children),false);if(personHits.length){let obj=personHits[0].object;while(obj.parent&&!walkers.includes(obj))obj=obj.parent;if(walkers.includes(obj)){openProfile(obj);return}}const hits=raycaster.intersectObjects([...blocks.values()],false);
  if(mode==='break'){if(hits.length){const d=hits[0].object.userData;if(d.y===0){showToast('O chão inicial não pode ser removido.');return}removeBlock(d.x,d.y,d.z);saveLocal()}return}
  if(hits.length){const hit=hits[0],p=hit.object.position,n=hit.face.normal;makeBlock(Math.round(p.x+n.x),Math.round(p.y+n.y),Math.round(p.z+n.z),selectedType,nick||'Visitante')}
  else {const groundY=0;const plane=new THREE.Plane(new THREE.Vector3(0,1,0),-.5);const pt=new THREE.Vector3();if(raycaster.ray.intersectPlane(plane,pt)){makeBlock(Math.round(pt.x),0,Math.round(pt.z),selectedType,nick||'Visitante')}}
@@ -147,7 +215,7 @@ document.getElementById('demoComment').onclick=()=>{const removed=removeRandomBl
 document.getElementById('demoLike').onclick=()=>spawnTNT();
 document.getElementById('demoSub').onclick=()=>{const removed=removeRandomBlocks(5);addFeed('⭐ Novo inscrito → '+removed+' blocos removidos.');showToast('⭐ Novo inscrito: '+removed+' blocos!');};
 
-function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera)}animate();
+let lastFrame=0;function animate(now=0){requestAnimationFrame(animate);if(now-lastFrame<33)return;lastFrame=now;const t=now*.006;for(const p of walkers){const d=p.userData;d.walkTimer-=.033;let dx=d.targetX-p.position.x,dz=d.targetZ-p.position.z,dist=Math.hypot(dx,dz);if(dist<.7||d.walkTimer<=0)chooseTarget(p);else{const speed=d.isLocal?1.35:.72;p.position.x+=dx/dist*speed*.033;p.position.z+=dz/dist*speed*.033;p.rotation.y=Math.atan2(dx,dz);const step=Math.sin(t*3+d.phase)*.45;d.legL.rotation.x=step;d.legR.rotation.x=-step;d.armL.rotation.x=-step*.7;d.armR.rotation.x=step*.7;}p.position.y=Math.abs(Math.sin(t*2+d.phase))*.035;d.tag.position.set(p.position.x,3.35+p.position.y,p.position.z)}controls.update();renderer.render(scene,camera)}animate();
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 </script>
 </body>
